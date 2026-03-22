@@ -5,6 +5,25 @@ import dotenv from "dotenv";
 dotenv.config();
 const router = express.Router();
 
+/* ✅ CREATE TRANSPORTER ONCE (outside route) */
+const transporter = nodemailer.createTransport({
+  service: "gmail", // 🔥 better for cloud
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+/* ✅ VERIFY SMTP */
+transporter.verify((err, success) => {
+  if (err) {
+    console.error("❌ SMTP ERROR:", err);
+  } else {
+    console.log("✅ SMTP READY");
+  }
+});
+
+/* 🚀 CONTACT ROUTE */
 router.post("/", async (req, res) => {
   const { name, email, message } = req.body;
 
@@ -16,23 +35,10 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
-
     await transporter.sendMail({
       from: `"TransXs Contact Form" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_TO,
-      subject: `New Contact Form Submission from ${name}`,
+      subject: `New Contact Form Submission`,
       text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
     });
 
@@ -40,11 +46,13 @@ router.post("/", async (req, res) => {
       success: true,
       message: "Message sent successfully!",
     });
+
   } catch (error) {
-    console.error("Email error:", error);
+    console.error("❌ FULL EMAIL ERROR:", error);
+
     res.status(500).json({
       success: false,
-      message: "Error sending email",
+      message: error.message || "Email failed",
     });
   }
 });
