@@ -17,6 +17,14 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// 🔥 ADD THIS
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ SMTP Error:", error);
+  } else {
+    console.log("✅ SMTP Server Ready");
+  }
+});
 /* ✅ SEND EMAIL FUNCTION */
 const sendEmails = async (booking) => {
   try {
