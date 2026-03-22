@@ -2,30 +2,38 @@ import express from "express";
 import Booking from "../models/booking.js";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-dotenv.config();
 
+dotenv.config();
 const router = express.Router();
 
-/* ✅ MAIL TRANSPORTER */
+/* =========================
+   ✅ FIXED MAIL TRANSPORTER
+========================= */
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
+  port: 465, // ✅ FIXED (was 587)
+  secure: true, // ✅ REQUIRED for 465
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
-// 🔥 ADD THIS
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("❌ SMTP Error:", error);
-  } else {
-    console.log("✅ SMTP Server Ready");
+/* =========================
+   ✅ VERIFY SMTP (SAFE)
+========================= */
+(async () => {
+  try {
+    await transporter.verify();
+    console.log("✅ SMTP READY");
+  } catch (err) {
+    console.error("❌ SMTP ERROR:", err.message);
   }
-});
-/* ✅ SEND EMAIL FUNCTION */
+})();
+
+/* =========================
+   📩 SEND EMAIL FUNCTION
+========================= */
 const sendEmails = async (booking) => {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
@@ -37,7 +45,7 @@ const sendEmails = async (booking) => {
 
     // 📩 USER EMAIL
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: `"TransXs Booking" <${process.env.EMAIL_USER}>`,
       to: booking.email,
       subject: `Booking Confirmed - ${booking.bookingId}`,
       html: `
@@ -56,13 +64,13 @@ const sendEmails = async (booking) => {
         </ul>
 
         <p>We will contact you within 24 hours.</p>
-      `
+      `,
     });
 
     // 📩 ADMIN EMAIL
     if (process.env.EMAIL_TO) {
       await transporter.sendMail({
-        from: process.env.EMAIL_USER,
+        from: `"TransXs Booking" <${process.env.EMAIL_USER}>`,
         to: process.env.EMAIL_TO,
         subject: `New Booking - ${booking.bookingId}`,
         html: `
@@ -76,7 +84,7 @@ const sendEmails = async (booking) => {
           <p><b>Travelers:</b> ${booking.travelers}</p>
           <p><b>Duration:</b> ${booking.duration}</p>
           <p><b>Cost:</b> ₹${booking.estimatedCost}</p>
-        `
+        `,
       });
     }
 
@@ -86,7 +94,9 @@ const sendEmails = async (booking) => {
   }
 };
 
-/* 🚀 CREATE BOOKING */
+/* =========================
+   🚀 CREATE BOOKING
+========================= */
 router.post("/", async (req, res) => {
   try {
     const {
@@ -97,14 +107,14 @@ router.post("/", async (req, res) => {
       date,
       travelers,
       duration,
-      estimatedCost
+      estimatedCost,
     } = req.body;
 
-    // ✅ BASIC VALIDATION
+    // ✅ VALIDATION
     if (!name || !email || !phone || !city || !date) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields"
+        message: "Missing required fields",
       });
     }
 
@@ -112,14 +122,16 @@ router.post("/", async (req, res) => {
     const booking = new Booking(req.body);
     const saved = await booking.save();
 
-    // 🔥 SEND EMAIL (non-blocking)
-    sendEmails(saved);
+    // 🔥 SEND EMAIL (NON-BLOCKING)
+    sendEmails(saved).catch(err =>
+      console.error("Email async error:", err.message)
+    );
 
     // ✅ RESPONSE
     res.status(201).json({
       success: true,
       bookingId: saved.bookingId,
-      data: saved
+      data: saved,
     });
 
   } catch (err) {
@@ -127,12 +139,14 @@ router.post("/", async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: err.message
+      message: err.message,
     });
   }
 });
 
-/* 📊 GET ALL BOOKINGS (ADMIN) */
+/* =========================
+   📊 GET ALL BOOKINGS
+========================= */
 router.get("/", async (req, res) => {
   try {
     const bookings = await Booking.find().sort({ createdAt: -1 });
@@ -140,12 +154,12 @@ router.get("/", async (req, res) => {
     res.json({
       success: true,
       count: bookings.length,
-      data: bookings
+      data: bookings,
     });
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: err.message,
     });
   }
 });
