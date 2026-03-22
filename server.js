@@ -13,29 +13,12 @@ dotenv.config();
 const app = express();
 
 /* =======================
-   🔐 CORS CONFIGURATION
+   🔐 CORS FIX (IMPORTANT)
 ======================= */
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  process.env.FRONTEND_URL
-].filter(Boolean);
-
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow Postman / curl (no origin)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    console.warn("❌ Blocked by CORS:", origin);
-    return callback(new Error("Not allowed by CORS"));
-  },
-  credentials: true
+  origin: "*", // ✅ allow all (fixes Vercel issue)
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type"]
 }));
 
 /* =======================
@@ -57,7 +40,7 @@ connection()
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => {
     console.error("❌ MongoDB connection failed:", err.message);
-    process.exit(1); // Stop server if DB fails
+    process.exit(1);
   });
 
 /* =======================
@@ -93,7 +76,7 @@ app.get("/api/test", (req, res) => {
 /* =======================
    ❌ 404 HANDLER
 ======================= */
-app.use("/api/*", (req, res) => {
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`
@@ -104,7 +87,7 @@ app.use("/api/*", (req, res) => {
    ⚠️ ERROR HANDLER
 ======================= */
 app.use((err, req, res, next) => {
-  console.error("🔥 Server Error:", err.message);
+  console.error("🔥 Server Error:", err);
 
   res.status(500).json({
     success: false,
@@ -117,8 +100,6 @@ app.use((err, req, res, next) => {
 ======================= */
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`🌍 Env: ${process.env.NODE_ENV || "development"}`);
-  console.log(`📡 API: http://localhost:${PORT}/api`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
