@@ -5,18 +5,17 @@ import dotenv from "dotenv";
 dotenv.config();
 const router = express.Router();
 
-/* ✅ CREATE TRANSPORTER (FIXED FOR CLOUD) */
+/* ✅ TRANSPORTER (RAILWAY SAFE) */
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465, // ✅ use SSL (better for Railway)
-  secure: true, // ✅ MUST be true for 465
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  family: 4 // 🔥 VERY IMPORTANT for Railway
 });
 
-/* ✅ VERIFY SMTP (SAFE) */
+/* ✅ VERIFY SMTP */
 (async () => {
   try {
     await transporter.verify();
@@ -39,11 +38,10 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    // 🔥 SEND EMAIL
     await transporter.sendMail({
       from: `"TransXs Contact" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_TO,
-      replyTo: email, // ✅ IMPORTANT (so you can reply to user)
+      replyTo: email,
       subject: `📩 New Contact from ${name}`,
       html: `
         <h2>New Contact Message</h2>
@@ -64,7 +62,7 @@ router.post("/", async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Email failed. Check server logs.",
+      message: error.message || "Email failed",
     });
   }
 });
